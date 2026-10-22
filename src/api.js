@@ -1,4 +1,6 @@
-const API_KEY = import.meta.env.VITE_OPENWEATHER_API_KEY
+import { placeLabel } from './favorites.js'
+
+const API_KEY =import.meta.env.VITE_OPENWEATHER_API_KEY
 const BASE = 'https://api.openweathermap.org'
 
 export const MISSING_KEY_MESSAGE =
@@ -43,13 +45,23 @@ async function request(path, params) {
 
 export async function searchPlaces(query) {
   const results = await request('/geo/1.0/direct', { q: query, limit: 5 })
-  return results.map((place) => ({
+  const places = results.map((place) => ({
     name: place.local_names?.sv || place.name,
     country: place.country,
     state: place.state,
     lat: place.lat,
     lon: place.lon,
   }))
+
+  // Geocoding kan ge flera punkter med samma namn. Behåll bara den första,
+  // annars visas förslag som inte går att skilja åt.
+  const seen = new Set()
+  return places.filter((place) => {
+    const label = placeLabel(place)
+    if (seen.has(label)) return false
+    seen.add(label)
+    return true
+  })
 }
 
 export async function getWeather(place) {
